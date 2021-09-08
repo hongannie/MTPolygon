@@ -52,13 +52,55 @@ A Gaussian smoothing operator was applied to blur images and remove background d
 
 O(i.j) =k=1ml=1nI(i+k-1,j+l-1)K(l,l)
 
-[![Product Name Screen Shot][gauss-eq]](https://example.com)
+k represents the kernel, a smaller matrix of values which slides over a larger matrix l (of the image itself). Each kernel position corresponds to a single output pixel, the value of which is calculated by multiplying together the kernel value and the underlying image pixel value for each of the cells in the kernel, and then adding all these numbers together.
 
+Figure 1. Application of gaussian filter. From right to left: nuclei of ens_swo/+; ens_swo/+, Dys_EP3397/+; Dys_EP3397/+ mutants.
 
+### Image Enhancement
 
+An enhancement filter (indicated as the “tubeness algorithm” in the code) was implemented to selectively amplify the intensity profile and structure of the microtubules in the image. These filters are scalar functions :RR that analyze 2nd order intensity derivatives which are encoded in a Hessian matrix. 
 
+If we let I(x) denote the intensity of a 2-dimensional image at coordinate x=[x1, x2]T, then the Hessian of I(x) at scale s is represented by a 2 by 2 matrix defined as:
 
+Hi,j(x,s)=s2I(x)*∂2∂xi∂xjG(x,s)  for i,j = 1,2 
 
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[gauss-eq]: images/screenshot.png
+G(x,s) is the gaussian filter described above ( G(x,s)=122e-(x2+s2)/22) and the * symbol represents convolution. All four filters use this and then can be decomposed to VDVTto find the eigenvectors.
+
+Four filters: Meijering, Frangi, Hessian, Sato were tested.  
+
+Figure 2. Tubeness algorithms were applied after the initial gaussian filter for nuclei Dys_EP3397/+ mutants. From left to right: Meijering, Frangi, Hessian, Sato.
+
+Meijering and Sato yield nearly identical outcomes, with similar identification profiles of microtubules. No results were observed after Frangi was implemented. The output for the Hessian algorithm does not match the original image observed in Fig. 1 (rightmost). Moving forwards, the Meijering filter was applied for all images.
+
+The tubeness algorithm F(x) can be represented as:
+
+F(x)=sup[eigH(x,s)]:sminssmax
+
+v is the enhancement filter Meijering and smin and smax values are chosen to best represent the image. Calculation of all microtubules are based on how “elliptical” they are. Elliptical shape and properties are measured by the 1/2eigenvector ratio. As this fraction approaches infinity, the distribution becomes increasingly linear whereas if the fraction were to approach 0, then it would represent a circular distribution. In Fig. 2, the smin and smax value have been defined as smin = 3 and smax = 10. The smax and smin values are meant to mirror the 1 and 2values in the eigenvector ratio.
+
+We can alter the smin and smax values to test which values best represent microtubule network profile from the original image. 
+
+Figure 3. Differing values for smax and smin were set for the Meijering filter applied to the same nuclei of a Dys_EP3397/+ mutant. From left to right: smin = 3, smax = 10; smin = 5, smax = 10; smin = 3, smax = 7.
+
+It appears that increasing the smin value promotes interconnectedness of microtubules and filters our smaller fragments while decreasing the smax value results in shorter fragments.
+
+### Image Cleanup
+The image was then binarized by calling the binarize function in ski-image. Fragments of 10 pixels and less were removed from the image using remove_small_objects from ski-image. Then microtubules were elongated by closing gaps of 5 pixels of less. Finally, the image was skeletonized via binary erosion.
+
+Figure 4. Image clean up for nuclei of a Dys_EP3397/+ mutant. From left to right: (1) Meijering filter applied with smin = 3, smax = 10; (2) Image was binarized and small fragments were removed; (3) Gaps of 5 pixels or less were closed; (4) Skeletonize the image.
+
+### Obtaining Polygon Areas
+Polygon labeled and obtained using the regionprops function from ski-image.
+
+Figure 5. Obtaining polygon areas from the MT network around the nuclei of a Dys_EP3397/+ mutant. From left to right: (1) Skeletonized image; (2) Polygons areas are obtained and shaded in; (3) Overlay of polygons and original image.
+
+<!-- CONCLUSIONS -->
+## Conclusions
+
+Of all the four algorithms, Meijering and Sato look to be the most effective tubeness algorithm. Further experiments to follow with other values.
+
+Observations show that ens_swo/+, Dys_EP3397/+ double mutants exhibit polarization of microtubules toward, but this has yet to be proven using the data gathered from the code. Currently, the code is built on the hypothesis that areas with high density of microtubules will have smaller polygon sizes. Because the microtubules are clustered so tightly together, the computer may treat multiple closely intersecting microtubules as a single entity. To supplement the polygon data, we could look into examining the intensity or density profiles. 
+
+Previously when we analyzed the control data, we found that the control had smaller polygon sizes than expected and did not fit the prediction that we had. In Fig. 6, it looks like there aren’t as many microtubules in the raw images (topmost), when we run the control data with the code, we pick up a lot of the faint signal. 
+
+Furthermore, we could look into 3D analysis to obtain a more accurate representation of the microtubule networks.
